@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axiform — Infrastructure Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Chakra+Petch:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #070809;
+    --bg2: #0c0e10;
+    --bg3: #111418;
+    --surface: #161b20;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.14);
+    --accent: #e8c14a;
+    --accent2: #4a8fe8;
+    --danger: #e84a4a;
+    --text: #d4d8dc;
+    --text-dim: #6b7580;
+    --text-muted: #3a4048;
+    --mono: 'DM Mono', monospace;
+    --display: 'Bebas Neue', sans-serif;
+    --ui: 'Chakra Petch', sans-serif;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--ui);
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 0 40px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(7,8,9,0.85);
+    backdrop-filter: blur(20px);
+  }
+
+  .nav-logo {
+    font-family: var(--display);
+    font-size: 1.8rem;
+    letter-spacing: 0.06em;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  .nav-logo span { color: var(--accent); }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--accent); }
+
+  .nav-cta {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    padding: 9px 20px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .nav-cta:hover { opacity: 0.85; }
+
+  /* ── HERO ── */
+  #hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 120px 80px 80px;
+    overflow: hidden;
+  }
+
+  .hero-blueprint {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .hero-blueprint svg {
+    width: 100%;
+    height: 100%;
+    opacity: 0.12;
+  }
+
+  .hero-scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent2), var(--accent), var(--accent2), transparent);
+    opacity: 0;
+    animation: scanLine 6s ease-in-out 1.5s infinite;
+    z-index: 1;
+  }
+
+  @keyframes scanLine {
+    0% { top: 15%; opacity: 0; }
+    5% { opacity: 0.8; }
+    95% { opacity: 0.8; }
+    100% { top: 85%; opacity: 0; }
+  }
+
+  .hero-corner {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    z-index: 2;
+  }
+
+  .hero-corner.tl { top: 80px; left: 40px; border-top: 1px solid var(--accent); border-left: 1px solid var(--accent); }
+  .hero-corner.tr { top: 80px; right: 40px; border-top: 1px solid var(--accent); border-right: 1px solid var(--accent); }
+  .hero-corner.bl { bottom: 40px; left: 40px; border-bottom: 1px solid var(--accent); border-left: 1px solid var(--accent); }
+  .hero-corner.br { bottom: 40px; right: 40px; border-bottom: 1px solid var(--accent); border-right: 1px solid var(--accent); }
+
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.3s;
+  }
+
+  .hero-tag::before {
+    content: '//';
+    margin-right: 8px;
+    opacity: 0.5;
+  }
+
+  .hero-title {
+    font-family: var(--display);
+    font-size: clamp(4.5rem, 11vw, 10rem);
+    line-height: 0.9;
+    letter-spacing: 0.01em;
+    color: #fff;
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.5s;
+  }
+
+  .hero-title .accent-line {
+    color: var(--accent);
+    display: block;
+  }
+
+  .hero-bottom {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-top: 48px;
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.8s;
+  }
+
+  .hero-desc {
+    max-width: 480px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 40px;
+    text-align: right;
+  }
+
+  .hero-stat-num {
+    font-family: var(--display);
+    font-size: 2.8rem;
+    color: #fff;
+    display: block;
+    line-height: 1;
+  }
+
+  .hero-stat-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    display: block;
+    margin-top: 4px;
+  }
+
+  .hero-divider {
+    width: 1px;
+    height: 50px;
+    background: var(--border-bright);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SECTION COMMON ── */
+  section {
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  .section-label::before { content: '[ '; }
+  .section-label::after { content: ' ]'; }
+
+  .section-title {
+    font-family: var(--display);
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    letter-spacing: 0.02em;
+    color: #fff;
+    line-height: 1;
+  }
+
+  /* ── PROBLEM SECTION ── */
+  #problem {
+    padding: 120px 80px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    margin-top: 60px;
+  }
+
+  .problem-text p {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+  }
+
+  .problem-text p strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .problem-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .problem-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 24px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .problem-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--danger);
+  }
+
+  .problem-card:hover { border-color: var(--border-bright); }
+
+  .problem-card-num {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+
+  .problem-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .problem-card-body {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ── SOLUTION SECTION ── */
+  #solution {
+    padding: 120px 80px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+  }
+
+  .solution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 80px;
+    gap: 40px;
+  }
+
+  .solution-intro {
+    max-width: 440px;
+    font-size: 1rem;
+    line-height: 1.75;
+    color: var(--text-dim);
+    margin-top: 24px;
+  }
+
+  .solution-pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 560px;
+    width: 100%;
+    flex: 1;
+  }
+
+  .pipeline-step {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .pipeline-step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    min-width: 36px;
+    padding-top: 4px;
+  }
+
+  .step-content h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .step-content p {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.65;
+    color: var(--text-dim);
+  }
+
+  .step-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    border: 1px solid rgba(74,143,232,0.25);
+    padding: 3px 8px;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  /* ── CAPABILITIES ── */
+  #capabilities {
+    padding: 120px 80px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin-top: 60px;
+  }
+
+  .cap-card {
+    background: var(--bg);
+    padding: 48px 40px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+
+  .cap-card:hover { background: var(--surface); }
+
+  .cap-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 28px;
+    color: var(--accent);
+  }
+
+  .cap-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+  }
+
+  .cap-card p {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+
+  .cap-detail {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── MARKET ── */
+  #market {
+    padding: 120px 80px;
+    background: var(--bg3);
+    border-top: 1px solid var(--border);
+  }
+
+  .market-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    margin-top: 60px;
+    align-items: center;
+  }
+
+  .market-numbers {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .market-num-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .market-num-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .mni-value {
+    font-family: var(--display);
+    font-size: 3.5rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .mni-label {
+    font-size: 0.88rem;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .mni-sub {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .market-text h3 {
+    font-family: var(--display);
+    font-size: 2.2rem;
+    color: #fff;
+    margin-bottom: 24px;
+    line-height: 1.1;
+  }
+
+  .market-text p {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.75;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+  }
+
+  /* ── FOUNDER ── */
+  #founder {
+    padding: 120px 80px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .founder-layout {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 80px;
+    margin-top: 60px;
+    align-items: start;
+  }
+
+  .founder-card {
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .founder-photo-placeholder {
+    width: 100%;
+    aspect-ratio: 3/4;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .founder-photo-placeholder svg {
+    opacity: 0.15;
+    width: 60%;
+  }
+
+  .founder-photo-placeholder::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 50%, var(--bg) 100%);
+  }
+
+  .founder-photo-scan {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+    animation: scanLine 4s ease-in-out infinite;
+  }
+
+  .founder-card-info {
+    padding: 24px 28px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .founder-card-name {
+    font-family: var(--display);
+    font-size: 1.6rem;
+    color: #fff;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+
+  .founder-card-title {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .founder-data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    margin-top: 20px;
+  }
+
+  .founder-data-cell {
+    background: var(--bg3);
+    padding: 14px 16px;
+  }
+
+  .fdc-key {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .fdc-val {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .founder-bio-section h3 {
+    font-family: var(--display);
+    font-size: 2rem;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+
+  .founder-bio-section p {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  .founder-quote {
+    margin: 32px 0;
+    padding: 24px 32px;
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    line-height: 1.75;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  .founder-credentials {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 28px;
+  }
+
+  .credential-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .cred-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+
+  .cred-text {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* ── CONTACT / CTA ── */
+  #contact {
+    padding: 120px 80px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #contact::before {
+    content: 'AXIFORM';
+    position: absolute;
+    font-family: var(--display);
+    font-size: 30vw;
+    color: rgba(255,255,255,0.015);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .contact-label {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+  }
+
+  .contact-title {
+    font-family: var(--display);
+    font-size: clamp(3rem, 7vw, 6rem);
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 28px;
+  }
+
+  .contact-sub {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    max-width: 480px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
+  }
+
+  .cta-group {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 14px 36px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+
+  .btn-primary:hover {
+    background: transparent;
+    color: var(--accent);
+  }
+
+  .btn-secondary {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    padding: 14px 36px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--text-dim);
+    color: var(--text);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 32px 80px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-logo {
+    font-family: var(--display);
+    font-size: 1.4rem;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.06em;
+  }
+
+  .footer-copy {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 24px;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--text-dim); }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    position: fixed;
+    bottom: 24px;
+    right: 40px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    background: #4ae880;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── SCROLL ANIMATIONS ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 900px) {
+    nav { padding: 0 24px; }
+    .nav-links { display: none; }
+    #hero { padding: 100px 24px 60px; }
+    .hero-bottom { flex-direction: column; gap: 32px; align-items: flex-start; }
+    .hero-stats { text-align: left; }
+    #problem, #solution, #capabilities, #market, #founder, #contact { padding: 80px 24px; }
+    .problem-grid, .market-layout, .solution-header { grid-template-columns: 1fr; gap: 48px; }
+    .cap-grid { grid-template-columns: 1fr; }
+    .founder-layout { grid-template-columns: 1fr; gap: 48px; }
+    footer { flex-direction: column; gap: 16px; text-align: center; padding: 32px 24px; }
+    .hero-corner { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- STATUS -->
+<div class="status-bar">
+  <div class="status-dot"></div>
+  SYSTEM ONLINE · AXIFORM v1.0
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#hero" class="nav-logo">AXI<span>FORM</span></a>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#solution">Solution</a></li>
+    <li><a href="#capabilities">Capabilities</a></li>
+    <li><a href="#market">Market</a></li>
+    <li><a href="#founder">Founder</a></li>
+  </ul>
+  <button class="nav-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Request Demo</button>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-blueprint">
+    <svg viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" fill="none">
+      <!-- Bridge wireframe -->
+      <line x1="0" y1="600" x2="1440" y2="600" stroke="#4a8fe8" stroke-width="1"/>
+      <line x1="0" y1="450" x2="1440" y2="450" stroke="#4a8fe8" stroke-width="0.5" stroke-dasharray="8,12"/>
+      <!-- Towers -->
+      <line x1="400" y1="600" x2="400" y2="200" stroke="#4a8fe8" stroke-width="1.5"/>
+      <line x1="1040" y1="600" x2="1040" y2="200" stroke="#4a8fe8" stroke-width="1.5"/>
+      <!-- Cables -->
+      <line x1="400" y1="200" x2="100" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="400" y1="200" x2="220" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="400" y1="200" x2="340" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="400" y1="200" x2="460" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="400" y1="200" x2="580" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="400" y1="200" x2="720" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="1040" y1="200" x2="720" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="1040" y1="200" x2="860" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="1040" y1="200" x2="980" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="1040" y1="200" x2="1100" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="1040" y1="200" x2="1220" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <line x1="1040" y1="200" x2="1340" y2="600" stroke="#e8c14a" stroke-width="0.8" opacity="0.7"/>
+      <!-- Cross beams -->
+      <line x1="100" y1="600" x2="100" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="220" y1="600" x2="220" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="340" y1="600" x2="340" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="460" y1="600" x2="460" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="580" y1="600" x2="580" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="860" y1="600" x2="860" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="980" y1="600" x2="980" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="1100" y1="600" x2="1100" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="1220" y1="600" x2="1220" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <line x1="1340" y1="600" x2="1340" y2="540" stroke="#4a8fe8" stroke-width="0.5"/>
+      <!-- Annotations -->
+      <circle cx="400" cy="200" r="4" fill="#e8c14a" opacity="0.6"/>
+      <circle cx="1040" cy="200" r="4" fill="#e8c14a" opacity="0.6"/>
+      <rect x="390" y="190" width="20" height="20" fill="none" stroke="#e8c14a" stroke-width="0.5" opacity="0.6"/>
+      <rect x="1030" y="190" width="20" height="20" fill="none" stroke="#e8c14a" stroke-width="0.5" opacity="0.6"/>
+      <!-- Measurement lines -->
+      <line x1="400" y1="160" x2="1040" y2="160" stroke="#4a8fe8" stroke-width="0.5" stroke-dasharray="4,8"/>
+      <line x1="400" y1="155" x2="400" y2="165" stroke="#4a8fe8" stroke-width="1"/>
+      <line x1="1040" y1="155" x2="1040" y2="165" stroke="#4a8fe8" stroke-width="1"/>
+      <text x="720" y="150" fill="#4a8fe8" font-size="10" text-anchor="middle" font-family="monospace" opacity="0.6">MAIN SPAN — INSPECTION ZONE</text>
+      <!-- Drone indicator -->
+      <circle cx="780" cy="380" r="20" fill="none" stroke="#e8c14a" stroke-width="0.8" stroke-dasharray="4,4"/>
+      <circle cx="780" cy="380" r="4" fill="#e8c14a" opacity="0.8"/>
+      <line x1="760" y1="380" x2="800" y2="380" stroke="#e8c14a" stroke-width="0.5" opacity="0.6"/>
+      <line x1="780" y1="360" x2="780" y2="400" stroke="#e8c14a" stroke-width="0.5" opacity="0.6"/>
+      <text x="810" y="377" fill="#e8c14a" font-size="8" font-family="monospace" opacity="0.8">UAV-01</text>
+      <!-- Defect markers -->
+      <circle cx="320" cy="595" r="8" fill="none" stroke="#e84a4a" stroke-width="1" opacity="0.9"/>
+      <text x="335" y="590" fill="#e84a4a" font-size="8" font-family="monospace">MICRO-CRACK DETECTED</text>
+      <circle cx="620" cy="597" r="6" fill="none" stroke="#e84a4a" stroke-width="1" opacity="0.7"/>
+      <text x="633" y="593" fill="#e84a4a" font-size="8" font-family="monospace">CORROSION: 12%</text>
+    </svg>
+  </div>
+
+  <div class="hero-scan-line"></div>
+  <div class="hero-corner tl"></div>
+  <div class="hero-corner tr"></div>
+  <div class="hero-corner bl"></div>
+  <div class="hero-corner br"></div>
+
+  <div class="hero-tag">Structural AI · Infrastructure Intelligence</div>
+  <h1 class="hero-title">
+    SEE WHAT
+    <span class="accent-line">FAILS BEFORE</span>
+    IT FALLS
+  </h1>
+
+  <div class="hero-bottom">
+    <p class="hero-desc">
+      Axiform deploys AI-powered analysis on drone imagery and sensor data to detect micro-cracks, corrosion, and deformation in bridges, pipelines, dams, and power lines — before they become catastrophic failures.
+    </p>
+    <div class="hero-stats">
+      <div>
+        <span class="hero-stat-num">$38B</span>
+        <span class="hero-stat-label">Market by 2030</span>
+      </div>
+      <div class="hero-divider"></div>
+      <div>
+        <span class="hero-stat-num">15%</span>
+        <span class="hero-stat-label">Market CAGR</span>
+      </div>
+      <div class="hero-divider"></div>
+      <div>
+        <span class="hero-stat-num">73%</span>
+        <span class="hero-stat-label">Inspection Cost Reduction</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section id="problem">
+  <div class="section-label reveal">The Problem</div>
+  <h2 class="section-title reveal">Infrastructure is aging.<br>Inspection is broken.</h2>
+
+  <div class="problem-grid">
+    <div class="problem-text reveal">
+      <p>
+        The world's critical infrastructure — bridges, pipelines, dams, transmission towers — was built for a 50-year lifespan. Most of it is well past that window.
+      </p>
+      <p>
+        <strong>City governments face a paradox:</strong> manual inspection at scale is prohibitively expensive, requires shutdowns, and exposes workers to dangerous environments. Yet scheduled inspections happen so infrequently that failures occur between cycles.
+      </p>
+      <p>
+        The American Society of Civil Engineers grades US infrastructure a <strong>C−</strong>. Over 7,500 bridges are structurally deficient. Pipeline incidents cause billions in economic damage annually. Aging power grid failures are accelerating.
+      </p>
+      <p>
+        The status quo is not sustainable. A new inspection paradigm isn't a luxury — <strong>it's an emergency.</strong>
+      </p>
+    </div>
+
+    <div class="problem-cards reveal">
+      <div class="problem-card">
+        <div class="problem-card-num">P-001</div>
+        <div class="problem-card-title">Manual Inspection at Scale is Infeasible</div>
+        <div class="problem-card-body">Rope access teams and underwater divers cost $8–40K per structure per inspection cycle. City budgets support annual inspections at best — quarterly is impossible.</div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-card-num">P-002</div>
+        <div class="problem-card-title">Scheduled Inspections Miss Rapid Degradation</div>
+        <div class="problem-card-body">Seismic events, thermal cycling, and corrosion-accelerating environments cause structural changes in weeks. Yearly inspections leave blind windows that kill people.</div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-card-num">P-003</div>
+        <div class="problem-card-title">Human Inspectors Have Cognitive Limits</div>
+        <div class="problem-card-body">Micro-cracks under 0.1mm, internal corrosion, and subsurface deformation are invisible to the human eye. By the time damage is visible, structural integrity is already compromised.</div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-card-num">P-004</div>
+        <div class="problem-card-title">Zero Centralized Intelligence</div>
+        <div class="problem-card-body">Inspection reports sit in PDFs and spreadsheets. No city has a real-time structural health dashboard. No deterioration trend exists. Decisions are made on incomplete data.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOLUTION -->
+<section id="solution">
+  <div class="solution-header">
+    <div>
+      <div class="section-label reveal">The Solution</div>
+      <h2 class="section-title reveal">Axiform<br>Intelligence Layer</h2>
+      <p class="solution-intro reveal">
+        We transform raw drone imagery and multi-sensor telemetry into a continuous, AI-graded structural health profile for every asset in a city's portfolio. From data acquisition to risk-ranked maintenance orders — fully automated.
+      </p>
+    </div>
+
+    <div class="solution-pipeline reveal">
+      <div class="pipeline-step">
+        <span class="step-num">01</span>
+        <div class="step-content">
+          <h3>Drone Deployment <span class="step-tag">Autonomous</span></h3>
+          <p>Autonomous UAV fleets fly pre-programmed inspection routes at programmable intervals — weekly, monthly, or triggered by seismic/weather events. LiDAR, RGB, thermal, and ultrasonic sensors capture multi-modal data simultaneously.</p>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <span class="step-num">02</span>
+        <div class="step-content">
+          <h3>AI Defect Detection <span class="step-tag">Computer Vision</span></h3>
+          <p>Our convolutional neural networks, trained on 2M+ annotated structural defect images, classify and geolocate micro-cracks, spalling, corrosion, deformation, and joint displacement with sub-millimeter precision.</p>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <span class="step-num">03</span>
+        <div class="step-content">
+          <h3>Deterioration Modeling <span class="step-tag">Predictive</span></h3>
+          <p>Time-series defect data feeds physics-informed ML models that project deterioration trajectories and predict time-to-failure windows. Every asset gets a dynamic structural health score.</p>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <span class="step-num">04</span>
+        <div class="step-content">
+          <h3>City Intelligence Dashboard <span class="step-tag">Real-Time</span></h3>
+          <p>Asset managers receive risk-ranked maintenance queues, cost-optimized intervention schedules, and regulatory compliance reports — all in a single operations center, accessible to city engineers and infrastructure teams.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAPABILITIES -->
+<section id="capabilities">
+  <div class="section-label reveal">Capabilities</div>
+  <h2 class="section-title reveal">What Axiform Detects</h2>
+
+  <div class="cap-grid reveal">
+    <div class="cap-card">
+      <svg class="cap-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 40 L24 8 L44 40 H4Z"/>
+        <line x1="4" y1="40" x2="44" y2="40"/>
+        <line x1="14" y1="40" x2="20" y2="28"/>
+        <line x1="24" y1="40" x2="24" y2="28"/>
+        <line x1="34" y1="40" x2="28" y2="28"/>
+        <circle cx="20" cy="32" r="2" stroke="#e84a4a" fill="#e84a4a"/>
+        <line x1="17" y1="30" x2="23" y2="34" stroke="#e84a4a" stroke-width="1"/>
+      </svg>
+      <h3>Bridge & Overpass Inspection</h3>
+      <p>Full-span visual survey covering deck surfaces, girders, bearings, piers, abutments, and cable systems. Detects fatigue cracks, section loss, and bearing displacement invisible to ground-level inspectors.</p>
+      <div class="cap-detail">// DETECTION: Cracks ≥ 0.05mm · Corrosion grade 0–5 · Deformation ±1mm</div>
+    </div>
+
+    <div class="cap-card">
+      <svg class="cap-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M8 20 Q24 14 40 20 L40 32 Q24 38 8 32 Z"/>
+        <line x1="8" y1="26" x2="40" y2="26"/>
+        <circle cx="18" cy="24" r="2" stroke="#e84a4a" fill="#e84a4a"/>
+        <path d="M2 26 C2 26 5 22 8 26" stroke="currentColor" stroke-width="1"/>
+        <path d="M46 26 C46 26 43 22 40 26" stroke="currentColor" stroke-width="1"/>
+        <line x1="24" y1="14" x2="24" y2="10"/>
+        <line x1="24" y1="38" x2="24" y2="42"/>
+      </svg>
+      <h3>Pipeline Integrity Monitoring</h3>
+      <p>Above-ground and aerial thermal imaging identifies heat anomalies indicating internal corrosion, joint leaks, and coating failure across natural gas, water, and oil transmission infrastructure.</p>
+      <div class="cap-detail">// DETECTION: Thermal anomaly ±0.5°C · Wall thinning · Joint displacement</div>
+    </div>
+
+    <div class="cap-card">
+      <svg class="cap-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 44 L12 12 L24 4 L36 12 L44 44 Z"/>
+        <line x1="4" y1="44" x2="44" y2="44"/>
+        <line x1="8" y1="32" x2="40" y2="32"/>
+        <line x1="10" y1="20" x2="38" y2="20"/>
+        <line x1="24" y1="4" x2="24" y2="44"/>
+        <circle cx="30" cy="28" r="3" stroke="#e84a4a" fill="none"/>
+        <line x1="28" y1="26" x2="32" y2="30" stroke="#e84a4a" stroke-width="1"/>
+      </svg>
+      <h3>Dam & Reservoir Surveying</h3>
+      <p>Multi-pass photogrammetric mapping generates centimeter-accurate 3D surface models. Differencing between survey epochs reveals seepage paths, surface cracking, and embankment settlement.</p>
+      <div class="cap-detail">// DETECTION: Surface crack width ≥ 0.1mm · Settlement ≥ 5mm · Seepage zones</div>
+    </div>
+
+    <div class="cap-card">
+      <svg class="cap-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="8" y1="8" x2="8" y2="44"/>
+        <line x1="40" y1="4" x2="40" y2="40"/>
+        <line x1="8" y1="16" x2="40" y2="12"/>
+        <line x1="8" y1="28" x2="40" y2="24"/>
+        <line x1="8" y1="40" x2="40" y2="36"/>
+        <line x1="24" y1="12" x2="24" y2="44"/>
+        <circle cx="24" cy="22" r="3" stroke="#e84a4a" fill="none"/>
+      </svg>
+      <h3>Power Line & Tower Assessment</h3>
+      <p>Autonomous corridor flights inspect transmission towers, conductor sag, insulator condition, and vegetation encroachment across hundreds of kilometers of transmission right-of-way in a single day.</p>
+      <div class="cap-detail">// DETECTION: Insulator damage · Conductor sag ±10cm · Vegetation clearance</div>
+    </div>
+
+    <div class="cap-card">
+      <svg class="cap-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="8" y="16" width="32" height="24"/>
+        <path d="M8 16 L24 6 L40 16"/>
+        <line x1="16" y1="40" x2="16" y2="28"/>
+        <line x1="24" y1="40" x2="24" y2="28"/>
+        <line x1="32" y1="40" x2="32" y2="28"/>
+        <rect x="20" y="24" width="8" height="6" fill="none"/>
+        <circle cx="34" cy="12" r="3" stroke="#e8c14a" fill="none"/>
+      </svg>
+      <h3>Building Envelope & Façade</h3>
+      <p>High-rise inspection without scaffolding. Thermal and visual sensors identify cladding detachment, water ingress, spalling concrete, and structural joint failure on commercial and civic buildings.</p>
+      <div class="cap-detail">// DETECTION: Thermal bridge ≥ 2°C ΔT · Spall area ≥ 50cm² · Joint gap ≥ 2mm</div>
+    </div>
+
+    <div class="cap-card">
+      <svg class="cap-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="24" cy="24" r="16"/>
+        <circle cx="24" cy="24" r="4"/>
+        <line x1="24" y1="8" x2="24" y2="14"/>
+        <line x1="24" y1="34" x2="24" y2="40"/>
+        <line x1="8" y1="24" x2="14" y2="24"/>
+        <line x1="34" y1="24" x2="40" y2="24"/>
+        <path d="M12 12 L24 24 L36 18" stroke="#e8c14a" stroke-width="1" fill="none"/>
+        <text x="24" y="28" text-anchor="middle" font-size="6" fill="currentColor" font-family="monospace">AI</text>
+      </svg>
+      <h3>Predictive Maintenance Engine</h3>
+      <p>Axiform's deterioration models integrate defect geometry, material properties, traffic load data, and environmental exposure to calculate remaining service life and optimal intervention windows.</p>
+      <div class="cap-detail">// OUTPUT: Failure probability curve · Intervention ROI · Regulatory compliance status</div>
+    </div>
+  </div>
+</section>
+
+<!-- MARKET -->
+<section id="market">
+  <div class="section-label reveal">Market Opportunity</div>
+  <h2 class="section-title reveal">Every Aging City<br>Is a Customer</h2>
+
+  <div class="market-layout">
+    <div class="market-numbers reveal">
+      <div class="market-num-item">
+        <span class="mni-value">$47B</span>
+        <span class="mni-label">Global Drone Inspection Market by 2034</span>
+        <span class="mni-sub">Growing at 15.5% CAGR from $12.9B in 2024 — driven by AI integration and regulatory mandates for critical infrastructure.</span>
+      </div>
+      <div class="market-num-item">
+        <span class="mni-value">600K+</span>
+        <span class="mni-label">Bridges in the US Alone</span>
+        <span class="mni-sub">Over 7,500 rated structurally deficient. Federal inspection mandates require biennial cycles — creating a guaranteed, recurring inspection demand.</span>
+      </div>
+      <div class="market-num-item">
+        <span class="mni-value">$2.6T</span>
+        <span class="mni-label">US Infrastructure Funding Gap (10-year)</span>
+        <span class="mni-sub">ASCE estimates a $2.6 trillion investment gap. AI-driven predictive maintenance reduces this gap by prioritizing the highest-risk interventions first.</span>
+      </div>
+    </div>
+
+    <div class="market-text reveal">
+      <h3>THE UNFUNDED MANDATE OF THE 21ST CENTURY</h3>
+      <p>
+        Every municipality, port authority, water utility, and transmission grid operator is sitting on infrastructure built decades ago — with no scalable way to monitor it continuously.
+      </p>
+      <p>
+        Axiform's SaaS model — priced per-asset per-year — plugs directly into city procurement budgets as a capital avoidance tool. Every dollar spent on Axiform prevents tens of dollars in emergency repair costs.
+      </p>
+      <p>
+        The beachhead is municipal bridge networks. The expansion is every linear asset that deteriorates, corrodes, or fatigues — which is everything that holds modern civilization together.
+      </p>
+      <div class="badge-row">
+        <span class="badge">Municipal Governments</span>
+        <span class="badge">Port Authorities</span>
+        <span class="badge">Water Utilities</span>
+        <span class="badge">Power Grid Operators</span>
+        <span class="badge">Rail Networks</span>
+        <span class="badge">Oil & Gas</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOUNDER -->
+<section id="founder">
+  <div class="section-label reveal">Founder</div>
+  <h2 class="section-title reveal">The Engineer<br>Behind Axiform</h2>
+
+  <div class="founder-layout">
+    <div class="founder-card reveal">
+      <div class="founder-photo-placeholder">
+        <div class="founder-photo-scan"></div>
+        <svg viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="60" cy="45" r="28" stroke="#4a8fe8" stroke-width="1" stroke-dasharray="4,4"/>
+          <path d="M20 140 C20 100 40 90 60 90 C80 90 100 100 100 140" stroke="#4a8fe8" stroke-width="1" stroke-dasharray="4,4"/>
+          <circle cx="60" cy="45" r="20" stroke="#e8c14a" stroke-width="0.8"/>
+          <line x1="20" y1="45" x2="100" y2="45" stroke="#4a8fe8" stroke-width="0.5" opacity="0.5"/>
+          <line x1="60" y1="10" x2="60" y2="80" stroke="#4a8fe8" stroke-width="0.5" opacity="0.5"/>
+          <rect x="50" y="35" width="20" height="20" fill="none" stroke="#e8c14a" stroke-width="0.5" opacity="0.5"/>
+          <text x="60" y="120" text-anchor="middle" font-family="monospace" font-size="8" fill="#4a8fe8" opacity="0.5">ID PENDING</text>
+        </svg>
+      </div>
+      <div class="founder-card-info">
+        <div class="founder-card-name">Sarthak Karandikar</div>
+        <div class="founder-card-title">Founder & CEO · Axiform</div>
+        <div class="founder-data-grid">
+          <div class="founder-data-cell">
+            <div class="fdc-key">Role</div>
+            <div class="fdc-val">Founder & CEO</div>
+          </div>
+          <div class="founder-data-cell">
+            <div class="fdc-key">Domain</div>
+            <div class="fdc-val">Structural Eng. + AI</div>
+          </div>
+          <div class="founder-data-cell">
+            <div class="fdc-key">Focus</div>
+            <div class="fdc-val">Infrastructure Tech</div>
+          </div>
+          <div class="founder-data-cell">
+            <div class="fdc-key">Status</div>
+            <div class="fdc-val">Building</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="founder-bio-section reveal">
+      <h3>Built from the ground up — literally.</h3>
+
+      <p>
+        Sarthak Karandikar founded Axiform at the intersection of two realities: the engineering truth that infrastructure degrades predictably, and the operational reality that most cities have no idea it's happening until something breaks.
+      </p>
+
+      <p>
+        With deep roots in structural engineering and a conviction that AI-native systems — not legacy NDT tools — are the answer to the inspection crisis, Sarthak is building Axiform as the intelligence layer that sits between drone hardware and the city engineer's desk.
+      </p>
+
+      <div class="founder-quote">
+        "We don't sell drone flights. We sell the certainty that nothing is failing undetected in your city's infrastructure portfolio. That's a fundamentally different value proposition — and one every public works director will pay for."
+        <br><br>— Sarthak Karandikar, Founder
+      </div>
+
+      <p>
+        The insight that drives Axiform is simple: structural degradation follows physics, and physics is learnable. The challenge isn't detection — cameras and sensors can see everything. The challenge is turning terabytes of aerial imagery into a ranked maintenance priority list that a city engineer can act on with confidence.
+      </p>
+
+      <div class="founder-credentials">
+        <div class="credential-item">
+          <div class="cred-dot"></div>
+          <span class="cred-text">Structural engineering background with focus on failure mechanics, material fatigue, and load analysis across civil and industrial assets</span>
+        </div>
+        <div class="credential-item">
+          <div class="cred-dot"></div>
+          <span class="cred-text">Deep expertise in computer vision for defect detection — convolutional architectures trained on annotated infrastructure imagery datasets</span>
+        </div>
+        <div class="credential-item">
+          <div class="cred-dot"></div>
+          <span class="cred-text">First-hand operational experience with autonomous drone systems, sensor fusion pipelines, and real-time data processing at the edge</span>
+        </div>
+        <div class="credential-item">
+          <div class="cred-dot"></div>
+          <span class="cred-text">Engaged with municipal procurement teams, infrastructure asset managers, and public works directors to validate the Axiform model pre-product</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-label reveal">Get in Touch</div>
+  <h2 class="contact-title reveal">READY TO<br>INSPECT<br>SMARTER?</h2>
+  <p class="contact-sub reveal">
+    If you manage city infrastructure, operate critical assets, or are investing in the future of structural intelligence — we want to talk.
+  </p>
+  <div class="cta-group reveal">
+    <a href="mailto:hello@axiform.io" class="btn-primary">Request a Demo</a>
+    <a href="mailto:investors@axiform.io" class="btn-secondary">Investor Inquiries</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">AXIFORM</div>
+  <div class="footer-copy">© 2026 Axiform. All rights reserved.</div>
+  <ul class="footer-links">
+    <li><a href="#">Privacy</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="mailto:hello@axiform.io">Contact</a></li>
+  </ul>
+</footer>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+  reveals.forEach(el => observer.observe(el));
+
+  // Cursor crosshair highlight
+  document.addEventListener('mousemove', (e) => {
+    const x = e.clientX;
+    const y = e.clientY;
+    document.body.style.setProperty('--mx', x + 'px');
+    document.body.style.setProperty('--my', y + 'px');
+  });
+
+  // Active nav highlight
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.style.color = a.getAttribute('href') === '#' + current ? 'var(--accent)' : '';
+    });
+  });
+</script>
+
+</body>
+</html>
